@@ -42,7 +42,7 @@ const getParty = () => {
 const getHealTarget = () => {
     const party = getParty();
     const healTarget = minBy(p => p.hp / p.max_hp, party);
-    if (healTarget.hp < healTarget.max_hp && can_heal(healTarget)) {
+    if (healTarget.hp < healTarget.max_hp && can_heal(healTarget) && character.ctype === "priest") {
         return healTarget;
     }
     return null;
@@ -86,7 +86,7 @@ var interval = attack_mode && setInterval(function () {
         use('use_mp');
     loot();
 
-    if (character.rip || is_moving(character)) return;
+    if (character.rip) return;
 
     var target = getAttackTarget();
     if (target && target.id !== character.target) {
@@ -94,10 +94,10 @@ var interval = attack_mode && setInterval(function () {
         change_target(target);
     }
     const healTarget = getHealTarget();    
-    const moveTarget = healTarget || target;
-    if (!is_in_range(moveTarget)) {
+    const moveTarget = healTarget || target || leader;
+    if (moveTarget && !is_in_range(moveTarget)) {
         xmove(moveTarget.x, moveTarget.y);
-    } else if (healTarget) {
+    } else if (healTarget && is_in_range(healTarget)) {
         set_message("Healing");
         heal(healTarget);
     } else if (can_attack(target)) {
