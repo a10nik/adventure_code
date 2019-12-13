@@ -90,40 +90,36 @@ const getAttackTarget = () => {
 
 function act() {
     gatherParty();
+    loot();
+    const { party, leader, isLeader } = getPartyInfo();
     if (character.rip) {
         respawn();
-        return;
-    }
-    const { party, leader, isLeader } = getPartyInfo();
-    if (party.length < 3) {
+    } else if (party.length < 3) {
         set_message("Gathering");
-        return;
-    }
-    if (character.hp < 100)
-        use('use_hp');
-    if (character.mp < character.max_mp - 200)
-        use('use_mp');
-    loot();
-
-    if (character.rip) return;
-
-    var target = getAttackTarget();
-    if (target && target.id !== character.target) {
-        change_target(target);
-    }
-    const healTarget = getHealTarget();
-    const moveTarget = healTarget || target || leader;
-    if (moveTarget && !is_in_range(moveTarget)) {
-        set_message("Moving");
-        xmove(moveTarget.x, moveTarget.y);
-    } else if (healTarget && is_in_range(healTarget)) {
-        set_message("Healing");
-        heal(healTarget);
-    } else if (can_attack(target)) {
-        set_message(isLeader ? "Attacking" : "Supporting");
-        attack(target);
     } else {
-        set_message("Idle");
+        if (character.hp < 100) {
+            use('use_hp');
+        } if (character.mp < character.max_mp - 200) {
+            use('use_mp');
+        }
+        var target = getAttackTarget();
+        if (target && target.id !== character.target) {
+            change_target(target);
+        }
+        const healTarget = getHealTarget();
+        const moveTarget = healTarget || target || leader;
+        if (moveTarget && !is_in_range(moveTarget)) {
+            set_message("Moving");
+            xmove(moveTarget.x, moveTarget.y);
+        } else if (healTarget && is_in_range(healTarget)) {
+            set_message("Healing");
+            heal(healTarget);
+        } else if (can_attack(target)) {
+            set_message(isLeader ? "Attacking" : "Supporting");
+            attack(target);
+        } else {
+            set_message("Idle");
+        }
     }
     setTimeout(act, 300)
 }
