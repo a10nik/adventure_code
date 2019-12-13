@@ -36,60 +36,73 @@ const gatherParty = () => {
 }
 
 const getParty = () => {
-    return character.party ? parent.entities.where(e => e.party === character.party).concat(character) : [character];
+    return character.party ? Object.values(parent.entities).filter(e => e.party === character.party).concat(character) : [character];
+}
+
+const getHealTarget = () => {
+    const party = getParty();
+    const healTarget = minBy(p => p.hp / p.max_hp, party);
+    if (healTarget.hp < healTarget.max_hp && can_heal(healTarget)) {
+        return healTarget;
+    }
+    return null;
+}
+
+const getPartyInfo = () => {
+    const party = getParty();
+    const leader = maxBy(a => a.max_hp, party);
+    const isLeader = leader.id === character.id;
+    return { party, leader, isLeader };
+}
+
+const getAttackTarget = () => {
+    const monsters = Object
+        .values(parent.entities)
+        .filter(e => e.type === "monster" && !e.dead && e.visible);
+    if (monsters.length === 0)
+        return null;
+    const { party, leader, isLeader } = getPartyInfo();
+    const partyIds = new Set(party.map(p => p.id));
+    const attackingMonsters = monsters.filter(m => partyIds.has(m.target));
+    return isLeader
+        ? minBy(m => parent.distance(character, m), attackingMonsters.length > 0 ? attackingMonsters : monsters)
+        : parent.entities[leader.target];
 }
 
 var attack_mode = true
 var interval = attack_mode && setInterval(function () {
-    try {
-        if (!character.party && getSiblingsOf(character).length > 0) {
-            gatherParty();
-            return;
-        }
-        if (character.rip) {
-            respawn();
-            return;
-        }
-        const party = getParty();
-        const leader = maxBy(a => a.max_hp, party);
-        const isLeader = leader.id === character.id;
-        if (character.hp < 100)
-            use('use_hp');
-        if (character.mp < character.max_mp - 200)
-            use('use_mp');
-        loot();
-
-        if (character.rip || is_moving(character)) return;
-
-        var target = get_targeted_monster();
-        if (!target) {
-            target = isLeader ? get_nearest_monster({ min_xp: 100, max_att: 120 }) : leader.target;
-            if (target) change_target(target);
-            else {
-                set_message("No Monsters");
-                return;
-            }
-        }
-        const healTarget = minBy(p => p.hp / p.max_hp, party);
-        if (healTarget.hp < healTarget.max_hp && can_heal(healTarget)) {
-            heal(healTarget);
-        }
-        
-        if (!is_in_range(target)) {
-            move(
-                character.x + (target.x - character.x) / 2,
-                character.y + (target.y - character.y) / 2
-            );
-            // Walk half the distance
-        }
-        else if (can_attack(target)) {
-            set_message("Attacking");
-            attack(target);
-        }
-    } catch (e) {
-        set_message("Error");
-        game_log(e.message);
+    if (!character.party && getSiblingsOf(character).length > 0) {
+        gatherParty();
+        return;
     }
+    if (character.rip) {
+        respawn();
+        return;
+    }
+    const { party, leader, isLeader } = getPartyInfo();
+    if (character.hp < 100)
+        use('use_hp');
+    if (character.mp < character.max_mp - 200)
+        use('use_mp');
+    loot();
 
+    if (character.rip || is_moving(character)) return;
+
+    var target = getAttackTarget();
+    if (target && target.id !== character.target) {
+        set_message(target ? "Attacking" : "No target");
+        change_target(target);
+    }
+    const healTarget = getHealTarget();    
+    const moveTarget = healTarget || target;
+    if (!is_in_range(moveTarget)) {
+        xmove(moveTarget.x, moveTarget.y);
+    } else if (healTarget) {
+        set_message("Healing");
+        heal(healTarget);
+    } else if (can_attack(target)) {
+        set_message(isLeader ? "Attacking" : "Supporting");
+        attack(target);
+    }
 }, 1000 / 4);
 
