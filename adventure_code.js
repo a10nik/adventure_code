@@ -3,7 +3,7 @@ const getSiblingsOf = (entity) => {
 }
 
 const extremumBy = (extremum) => (pluck, arr) => {
-    return arr.reduce(function (best, next) {
+    return arr.length ? arr.reduce(function (best, next) {
         var pair = [pluck(next), next];
         if (!best) {
             return pair;
@@ -12,31 +12,39 @@ const extremumBy = (extremum) => (pluck, arr) => {
         } else {
             return pair;
         }
-    }, null)[1];
+    }, null)[1] : null;
 }
 
 const minBy = extremumBy(Math.min);
 const maxBy = extremumBy(Math.max);
 
-
 const gatherParty = () => {
     const allies = getSiblingsOf(character);
-    const fattest = maxBy(a => a.max_hp, allies);
-    if (character.max_hp > fattest.max_hp) {
-        set_message("Inviting");
+	if (allies.length === 0)
+		return;
+	
+    const maxIdChar = maxBy(a => a.id, allies);
+    if (character.id > maxIdChar.id) {
         for (const ally of allies) {
-            if (ally.id !== character.id) {
+            if (!ally.party) {
+                set_message("Inviting");
                 send_party_invite(ally.id);
+            } else {
+                send_party_request(ally.id);
             }
         }
-    } else {
+    } else if (!character.party) {
         set_message("Accepting invites");
-        accept_party_invite(fattest.id);
+        accept_party_invite(maxIdChar.id);
+    } else if (maxIdChar.party !== character.party) {
+        send_party_invite(maxIdChar);
     }
 }
 
 const getParty = () => {
-    return character.party ? Object.values(parent.entities).filter(e => e.party === character.party).concat(character) : [character];
+    return character.party
+        ? Object.values(parent.entities).filter(e => e.party === character.party).concat(character)
+        : [character];
 }
 
 const getHealTarget = () => {
@@ -71,10 +79,7 @@ const getAttackTarget = () => {
 
 var attack_mode = true
 var interval = attack_mode && setInterval(function () {
-    if (!character.party && getSiblingsOf(character).length > 0) {
-        gatherParty();
-        return;
-    }
+    gatherParty();
     if (character.rip) {
         respawn();
         return;
@@ -90,12 +95,12 @@ var interval = attack_mode && setInterval(function () {
 
     var target = getAttackTarget();
     if (target && target.id !== character.target) {
-        set_message(target ? "Attacking" : "No target");
         change_target(target);
     }
     const healTarget = getHealTarget();    
     const moveTarget = healTarget || target || leader;
     if (moveTarget && !is_in_range(moveTarget)) {
+        set_message("Moving");
         xmove(moveTarget.x, moveTarget.y);
     } else if (healTarget && is_in_range(healTarget)) {
         set_message("Healing");
@@ -103,6 +108,8 @@ var interval = attack_mode && setInterval(function () {
     } else if (can_attack(target)) {
         set_message(isLeader ? "Attacking" : "Supporting");
         attack(target);
-    }
+    } else {
+        set_message("Idle");
+	}
 }, 1000 / 4);
 
