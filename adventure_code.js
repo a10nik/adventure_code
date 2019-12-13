@@ -50,7 +50,8 @@ var interval = attack_mode && setInterval(function () {
             respawn();
             return;
         }
-        const leader = maxBy(a => a.max_hp, getParty());
+        const party = getParty();
+        const leader = maxBy(a => a.max_hp, party);
         const isLeader = leader.id === character.id;
         if (character.hp < 100)
             use('use_hp');
@@ -62,12 +63,16 @@ var interval = attack_mode && setInterval(function () {
 
         var target = get_targeted_monster();
         if (!target) {
-            target = isLeader ? get_nearest_monster({ min_xp: 100, max_att: 120 }) : ;
+            target = isLeader ? get_nearest_monster({ min_xp: 100, max_att: 120 }) : leader.target;
             if (target) change_target(target);
             else {
                 set_message("No Monsters");
                 return;
             }
+        }
+        const healTarget = minBy(p => p.hp / p.max_hp, party);
+        if (healTarget.hp < healTarget.max_hp && can_heal(healTarget)) {
+            heal(healTarget);
         }
         
         if (!is_in_range(target)) {
