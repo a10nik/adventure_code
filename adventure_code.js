@@ -15,29 +15,40 @@ const extremumBy = (extremum) => (pluck, arr) => {
     }, null)[1] : null;
 }
 
+function on_party_invite(name) {
+    if (getSiblingsOf(character).some(s => s.id === name)) {
+        accept_party_invite(name)
+    } else {
+        log(`declining invite from ${name}`);
+    }
+}
+
+function on_party_request(name) {
+    if (getSiblingsOf(character).some(s => s.id === name)) {
+        accept_party_request(name)
+    } else {
+        log(`declining request from ${name}`);
+    }
+}
+
 const minBy = extremumBy(Math.min);
 const maxBy = extremumBy(Math.max);
 
 const gatherParty = () => {
+    if (character.party)
+        return;
     const allies = getSiblingsOf(character);
-	if (allies.length === 0)
-		return;
-	
-    const maxIdChar = maxBy(a => a.id, allies);
-    if (character.id > maxIdChar.id) {
-        for (const ally of allies) {
-            if (!ally.party) {
-                set_message("Inviting");
-                send_party_invite(ally.id);
-            } else {
-                send_party_request(ally.id);
-            }
+    if (allies.length === 0) {
+        log("no allies found");
+        return;
+    }
+    for (const ally of allies) {
+        if (!ally.party) {
+            set_message("Inviting");
+            send_party_invite(ally.id);
+        } else {
+            send_party_request(ally.id);
         }
-    } else if (!character.party) {
-        set_message("Accepting invites");
-        accept_party_invite(maxIdChar.id);
-    } else if (maxIdChar.party !== character.party) {
-        send_party_invite(maxIdChar);
     }
 }
 
@@ -77,14 +88,17 @@ const getAttackTarget = () => {
         : parent.entities[leader.target];
 }
 
-var attack_mode = true
-var interval = attack_mode && setInterval(function () {
+function act() {
     gatherParty();
     if (character.rip) {
         respawn();
         return;
     }
     const { party, leader, isLeader } = getPartyInfo();
+    if (party.length < 3) {
+        set_message("Gathering");
+        return;
+    }
     if (character.hp < 100)
         use('use_hp');
     if (character.mp < character.max_mp - 200)
@@ -97,7 +111,7 @@ var interval = attack_mode && setInterval(function () {
     if (target && target.id !== character.target) {
         change_target(target);
     }
-    const healTarget = getHealTarget();    
+    const healTarget = getHealTarget();
     const moveTarget = healTarget || target || leader;
     if (moveTarget && !is_in_range(moveTarget)) {
         set_message("Moving");
@@ -110,6 +124,8 @@ var interval = attack_mode && setInterval(function () {
         attack(target);
     } else {
         set_message("Idle");
-	}
-}, 1000 / 4);
+    }
+    setTimeout(act, 300)
+}
+act()
 
