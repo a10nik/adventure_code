@@ -31,6 +31,10 @@ function on_party_request(name) {
     }
 }
 
+function on_combined_damage() {
+    move(character.real_x+5, character.real_y);
+}
+
 const minBy = extremumBy(Math.min);
 const maxBy = extremumBy(Math.max);
 
