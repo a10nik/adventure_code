@@ -85,16 +85,14 @@ const getAttackTarget = () => {
     const { party, leader, isLeader } = getPartyInfo();
     const partyIds = new Set(party.map(p => p.id));
     const attackingMonsters = monsters.filter(m => partyIds.has(m.target));
-    const selectedMonsters = monsters.filter(m => config.mtype === m.mtype);
-    const safeMonsters = monsters.filter(m => config.safeMtypes.has(m.mtype));
+    const safeMonsters = monsters.filter(m => m.attack < config.maxDmg);
     return isLeader
-        ? minBy(m => parent.distance(character, m), nullIfEmpty(attackingMonsters) || nullIfEmpty(selectedMonsters) || safeMonsters)
+        ? minBy(m => parent.distance(character, m), nullIfEmpty(attackingMonsters) || safeMonsters)
         : parent.entities[leader.target];
 }
 
 const config = {
-    mtype: "squigtoad",
-    safeMtypes: new Set(["squig", "squigtoad"])
+    maxDmg: 120,
 };
 
 function act() {
@@ -106,9 +104,10 @@ function act() {
     } else if (party.length < 3) {
         set_message("Gathering");
     } else {
-        if (character.hp < 100) {
+        if (character.hp < character.max_hp - 1000) {
             use('use_hp');
-        } if (character.mp < character.max_mp - 200) {
+        }
+        if (character.mp < character.max_mp - 200) {
             use('use_mp');
         }
         var target = getAttackTarget();
@@ -119,7 +118,7 @@ function act() {
         const moveTarget = healTarget || target || leader;
         if (moveTarget && !is_in_range(moveTarget)) {
             set_message("Moving");
-            xmove(moveTarget.x, moveTarget.y);
+            move(moveTarget.x, moveTarget.y);
         } else if (healTarget && is_in_range(healTarget)) {
             set_message("Healing");
             heal(healTarget);
