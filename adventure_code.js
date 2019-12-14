@@ -91,7 +91,8 @@ const getAttackTarget = () => {
     const { party, leader, isLeader } = getPartyInfo();
     const partyIds = new Set(party.map(p => p.id));
     const attackingMonsters = monsters.filter(m => partyIds.has(m.target));
-    const safeMonsters = monsters.filter(m => m.attack < config.maxDmg);
+    const safeMonsters = monsters
+		.filter(m => m.attack < config.maxDmg && (m.evasion || 0) < config.maxEvasion);
     return isLeader
         ? minBy(m => parent.distance(character, m), nullIfEmpty(attackingMonsters) || safeMonsters)
         : parent.entities[leader.target];
@@ -99,6 +100,7 @@ const getAttackTarget = () => {
 
 const config = {
     maxDmg: 120,
+	maxEvasion: 90,
 };
 
 function act() {
