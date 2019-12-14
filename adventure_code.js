@@ -99,7 +99,7 @@ const getAttackTarget = () => {
 }
 
 const config = {
-    maxDmg: 120,
+    maxDmg: 150,
 	maxEvasion: 90,
 };
 
@@ -126,7 +126,7 @@ function act() {
         const moveTarget = healTarget || target || leader;
         if (moveTarget && !is_in_range(moveTarget)) {
             set_message("Moving");
-            move(moveTarget.x, moveTarget.y);
+            xmove(moveTarget.x, moveTarget.y);
         } else if (healTarget && is_in_range(healTarget)) {
             set_message("Healing");
             heal(healTarget);
