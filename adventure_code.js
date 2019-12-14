@@ -74,6 +74,8 @@ const getPartyInfo = () => {
     return { party, leader, isLeader };
 }
 
+const nullIfEmpty = arr => arr.length === 0 ? null : arr;
+
 const getAttackTarget = () => {
     const monsters = Object
         .values(parent.entities)
@@ -83,10 +85,17 @@ const getAttackTarget = () => {
     const { party, leader, isLeader } = getPartyInfo();
     const partyIds = new Set(party.map(p => p.id));
     const attackingMonsters = monsters.filter(m => partyIds.has(m.target));
+    const selectedMonsters = monsters.filter(m => config.mtype === m.mtype);
+    const safeMonsters = monsters.filter(m => config.safeMtypes.has(m.mtype));
     return isLeader
-        ? minBy(m => parent.distance(character, m), attackingMonsters.length > 0 ? attackingMonsters : monsters)
+        ? minBy(m => parent.distance(character, m), nullIfEmpty(attackingMonsters) || nullIfEmpty(selectedMonsters) || safeMonsters)
         : parent.entities[leader.target];
 }
+
+const config = {
+    mtype: "squigtoad",
+    safeMtypes: new Set(["squig", "squigtoad"])
+};
 
 function act() {
     gatherParty();
